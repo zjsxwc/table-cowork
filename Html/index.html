@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chorme=1"/>
+    <meta http-equiv="Content-Type" content="text/html" charset="utf-8"/>
+
+    <title>Table cowork</title>
+
+</head>
+<body>
+
+
+<table id="coworkTable" border="1">
+
+</table>
+
+<style>
+ .tipString{
+     color: cadetblue;
+     position: relative;
+     top: -10px;
+ }
+
+
+</style>
+<script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script>
+    var tableId = '__TABLE_ID__';
+    var nickname = null;
+    while (!nickname) {
+        if (!nickname) {
+            nickname = prompt("Please enter your nickname", "User_" + Number(new Date()));
+        }
+        if (!nickname) {
+            alert('Not valid nickname');
+        }
+    }
+
+
+    var serverIp = '__SERVER_IP__';
+    var serverPort = '__SERVER_PORT__';
+    var ws = new WebSocket("ws://" + serverIp + ":" + serverPort);
+    ws.onopen = function () {
+        console.log("opened");
+        //now we can send messages to server: `ws.send("hello");`
+    };
+    ws.onmessage = function (evt) {
+        handleMessageFromServer(evt.data);
+    };
+    ws.onclose = function (evt) {
+        console.log("WebSocketClosed!");
+    };
+    ws.onerror = function (evt) {
+        console.log("WebSocketError!");
+    };
+
+
+    console.log(tableId);
+
+    //我们使用ajax来发数据给服务器，用websocket来接收来自服务器的通知
+    function handleMessageFromServer(message) {
+        var x, y;
+        message = JSON.parse(message);
+        console.log(message);
+
+        if (message.action == 'updateCell') {
+            x = message.cellPosition[0];
+            y = message.cellPosition[1];
+            tableContext.table[x][y] = message.value;
+
+            changeTableUserStatus(message.nickname, x, y);
+
+            renderTable();
+        }
+
+        if (message.action == 'cellPosition') {
+            x = message.cellPosition[0];
+            y = message.cellPosition[1];
+
+            changeTableUserStatus(message.nickname, x, y);
+
+            renderTable();
+        }
+
+    }
+
+    var tableContext = {
+        table: [[]],
+        tableId: tableId,
+        tableUserStatus: []
+    };
+
+    function getTable(successCallback) {
+        $.post('?tableId=' + tableId + '&action=getTable', function (response) {
+            if (response.code == -1) {
+                tableContext = response.data;
+                if (successCallback) {
+                    successCallback();
+                }
+            }
+        });
+    }
+
+    function changeTableUserStatus(nickname, x, y) {
+        var foundNickname = false;
+        for (var i = 0; i < tableContext.tableUserStatus.length; i++) {
+            if (tableContext.tableUserStatus[i]["nickname"] == nickname) {
+                tableContext.tableUserStatus[i]["cellPosition"] = [x, y];
+                foundNickname = true;
+                break;
+            }
+        }
+        if (!foundNickname) {
+            tableContext.tableUserStatus.push(
+                {
+                    nickname: nickname,
+                    cellPosition: [x, y]
+                }
+            )
+        }
+    }
+
+    function cellPosition(x, y, successCallback) {
+        $.post('?tableId=' + tableId + '&action=cellPosition', {x: x, y: y, nickname: nickname}, function (response) {
+            if (response.code == -1) {
+                changeTableUserStatus(nickname, x, y);
+                if (successCallback) {
+                    successCallback();
+                }
+            }
+        });
+    }
+
+    function updateCell(x, y, value, oldValue, successCallback) {
+        $.post('?tableId=' + tableId + '&action=updateCell', {
+            x: x,
+            y: y,
+            value: value,
+            nickname: nickname
+        }, function (response) {
+            if (response.code == -1) {
+                tableContext.table[x][y] = value;
+                changeTableUserStatus(nickname, x, y);
+                if (successCallback) {
+                    successCallback();
+                }
+            } else {
+                tableContext.table[x][y] = oldValue;
+            }
+        });
+    }
+
+
+    getTable(renderTable);
+
+    function renderTable() {
+        var row, table, ondblclickCode, onclickCode, nickname, cellPositionArray, x, y, tableUserStatusListMapByCell, key, tipString, cellValueString;
+
+        tableUserStatusListMapByCell = {};
+        for (var k = 0; k < tableContext.tableUserStatus.length; k++) {
+            nickname = tableContext.tableUserStatus[k]["nickname"];
+            cellPositionArray = tableContext.tableUserStatus[k]["cellPosition"];
+            x = cellPositionArray[0];
+            y = cellPositionArray[1];
+
+            key = String(x) + "," + String(y);
+            if (tableUserStatusListMapByCell[key]) {
+                tableUserStatusListMapByCell[key].push(nickname);
+            } else {
+                tableUserStatusListMapByCell[key] = [nickname];
+            }
+        }
+
+
+        table = $("#coworkTable");
+        table.html("");
+        for (var i = 0; i < tableContext.table.length; i++) {
+            row = $("<tr />");
+            table.append(row);
+            for (var j = 0; j < tableContext.table[i].length; j++) {
+                cellValueString = "<span class='cellValue'>" +tableContext.table[i][j] +"</span>";
+
+                key = String(i) + "," + String(j);
+                tipString = "";
+                if (tableUserStatusListMapByCell[key] && tableUserStatusListMapByCell[key].length) {
+                    tipString = '<span class="tipString">' + String(tableUserStatusListMapByCell[key].length) + '</span>';
+                }
+
+                ondblclickCode = 'enterNewValue(this,' + i + ',' + j + ')';
+                onclickCode = 'enterCell(this,' + i + ',' + j + ')';
+                row.append($("<td ondblclick='" + ondblclickCode + "' onclick='"+ onclickCode +"'>" + cellValueString + tipString + "</td>"));
+            }
+        }
+    }
+
+    function enterNewValue(cell, x, y) {
+        var oldValue = $(cell).find('.cellValue').text();
+        var newValue = prompt("New value", oldValue);
+        if (newValue) {
+            updateCell(x, y, newValue, oldValue, function () {
+                $(cell).text(newValue);
+            });
+        }
+    }
+
+    function enterCell(cell, x, y) {
+        cellPosition(x, y);
+    }
+
+</script>
+</body>
+</html>
