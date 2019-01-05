@@ -65,6 +65,8 @@
         console.log(message);
 
         if (message.action == 'updateCell') {
+            if (message.tableId != tableId) return;
+            
             x = message.cellPosition[0];
             y = message.cellPosition[1];
             tableContext.table[x][y] = message.value;
@@ -75,6 +77,8 @@
         }
 
         if (message.action == 'cellPosition') {
+            if (message.tableId != tableId) return;
+            
             x = message.cellPosition[0];
             y = message.cellPosition[1];
 
