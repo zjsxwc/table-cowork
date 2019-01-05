@@ -11,7 +11,6 @@ namespace Service;
 use Swoole\WebSocket\Server;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
-use swoole_websocket_server;
 
 class TableCoworkServer
 {
