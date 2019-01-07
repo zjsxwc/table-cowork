@@ -27,13 +27,15 @@
 <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
 <script>
     var tableId = '__TABLE_ID__';
-    var nickname = null;
-    while (!nickname) {
-        if (!nickname) {
-            nickname = prompt("Please enter your nickname", "User_" + Number(new Date()));
+    var currentNickname = localStorage.getItem("nickname");
+    while (!currentNickname) {
+        if (!currentNickname) {
+            currentNickname = prompt("Please enter your nickname", "User_" + Number(new Date()));
         }
-        if (!nickname) {
+        if (!currentNickname) {
             alert('Not valid nickname');
+        } else {
+            localStorage.setItem("nickname", currentNickname);
         }
     }
 
@@ -65,7 +67,9 @@
         console.log(message);
 
         if (message.action == 'updateCell') {
-            if (message.tableId != tableId) return;
+            if (message.tableId != tableId) {
+                return;
+            }
             
             x = message.cellPosition[0];
             y = message.cellPosition[1];
@@ -73,18 +77,20 @@
 
             changeTableUserStatus(message.nickname, x, y);
 
-            renderTable();
+            renderTableOptimized();
         }
 
         if (message.action == 'cellPosition') {
-            if (message.tableId != tableId) return;
+            if (message.tableId != tableId) {
+                return;
+            }
             
             x = message.cellPosition[0];
             y = message.cellPosition[1];
 
             changeTableUserStatus(message.nickname, x, y);
 
-            renderTable();
+            renderTableOptimized();
         }
 
     }
@@ -99,6 +105,7 @@
         $.post('?tableId=' + tableId + '&action=getTable', function (response) {
             if (response.code == -1) {
                 tableContext = response.data;
+                oldTableContext = cloneObject(tableContext);
                 if (successCallback) {
                     successCallback();
                 }
@@ -110,7 +117,7 @@
         var foundNickname = false;
         for (var i = 0; i < tableContext.tableUserStatus.length; i++) {
             if (tableContext.tableUserStatus[i]["nickname"] == nickname) {
-                tableContext.tableUserStatus[i]["cellPosition"] = [x, y];
+                tableContext.tableUserStatus[i]["userStatus"] = {cellPosition: [x, y]};
                 foundNickname = true;
                 break;
             }
@@ -119,36 +126,32 @@
             tableContext.tableUserStatus.push(
                 {
                     nickname: nickname,
-                    cellPosition: [x, y]
+                    userStatus: {cellPosition: [x, y]}
                 }
             )
         }
     }
 
-    function cellPosition(x, y, successCallback) {
-        $.post('?tableId=' + tableId + '&action=cellPosition', {x: x, y: y, nickname: nickname}, function (response) {
+    function cellPosition(x, y) {
+        $.post('?tableId=' + tableId + '&action=cellPosition', {x: x, y: y, nickname: currentNickname}, function (response) {
             if (response.code == -1) {
-                changeTableUserStatus(nickname, x, y);
-                if (successCallback) {
-                    successCallback();
-                }
+                changeTableUserStatus(currentNickname, x, y);
+                renderTableOptimized();
             }
         });
     }
 
-    function updateCell(x, y, value, oldValue, successCallback) {
+    function updateCell(x, y, value, oldValue) {
         $.post('?tableId=' + tableId + '&action=updateCell', {
             x: x,
             y: y,
             value: value,
-            nickname: nickname
+            nickname: currentNickname
         }, function (response) {
             if (response.code == -1) {
                 tableContext.table[x][y] = value;
-                changeTableUserStatus(nickname, x, y);
-                if (successCallback) {
-                    successCallback();
-                }
+                changeTableUserStatus(currentNickname, x, y);
+                renderTableOptimized();
             } else {
                 tableContext.table[x][y] = oldValue;
             }
@@ -157,18 +160,84 @@
 
 
     getTable(renderTable);
+    function cloneObject(obj) {
+        return JSON.parse(JSON.stringify(obj));
+    }
+    var oldTableContext;
+    function renderTableOptimized() {
+        if (!tableContext.table.length) {
+            return;
+        }
+        // else {
+        //     if (!oldTableContext) {
+        //         oldTableContext = cloneObject(tableContext);
+        //         return;
+        //     }
+        // }
+
+        var i, j, k, tdId, tableUserStatusListMapByCell, oldTableUserStatusListMapByCell, key, nickname;
+        //找出 tableContext.table 与 oldTableContext.table 不同的所有 cellPosition 然后覆盖为最新的
+        for (i = 0; i < tableContext.table.length; i++) {
+            for (j = 0; j < tableContext.table[i].length; j++) {
+                if (tableContext.table[i][j] != oldTableContext.table[i][j]) {
+                    tdId = String(i) + "_" + String(j);
+                    $('#' + tdId).find('.cellValue').html(tableContext.table[i][j]);
+                }
+            }
+        }
+
+        //清空 oldTableContext.tableUserStatus 所有 cellPosition
+        oldTableUserStatusListMapByCell = {};
+        for (k = 0; k < oldTableContext.tableUserStatus.length; k++) {
+            nickname = oldTableContext.tableUserStatus[k]["nickname"];
+            cellPositionArray = oldTableContext.tableUserStatus[k]["userStatus"]["cellPosition"];
+            x = cellPositionArray[0];
+            y = cellPositionArray[1];
+
+            key = String(x) + "_" + String(y);
+            if (oldTableUserStatusListMapByCell[key]) {
+                oldTableUserStatusListMapByCell[key].push(nickname);
+            } else {
+                oldTableUserStatusListMapByCell[key] = [nickname];
+            }
+        }
+        for (key in oldTableUserStatusListMapByCell) {
+            $('#' + key).find('.tipString').html("");
+        }
+
+        //覆盖 tableContext.tableUserStatus 所有 cellPosition
+        tableUserStatusListMapByCell = {};
+        for (k = 0; k < tableContext.tableUserStatus.length; k++) {
+            nickname = tableContext.tableUserStatus[k]["nickname"];
+            cellPositionArray = tableContext.tableUserStatus[k]["userStatus"]["cellPosition"];
+            x = cellPositionArray[0];
+            y = cellPositionArray[1];
+
+            key = String(x) + "_" + String(y);
+            if (tableUserStatusListMapByCell[key]) {
+                tableUserStatusListMapByCell[key].push(nickname);
+            } else {
+                tableUserStatusListMapByCell[key] = [nickname];
+            }
+        }
+        for (key in tableUserStatusListMapByCell) {
+            $('#' + key).find('.tipString').html(tableUserStatusListMapByCell[key].length);
+        }
+
+        oldTableContext = cloneObject(tableContext);
+    }
 
     function renderTable() {
-        var row, table, ondblclickCode, onclickCode, nickname, cellPositionArray, x, y, tableUserStatusListMapByCell, key, tipString, cellValueString;
+        var row, table, ondblclickCode, onclickCode, nickname, cellPositionArray, x, y, tableUserStatusListMapByCell, key, tipString, cellValueString, tdId, nickname;
 
         tableUserStatusListMapByCell = {};
         for (var k = 0; k < tableContext.tableUserStatus.length; k++) {
             nickname = tableContext.tableUserStatus[k]["nickname"];
-            cellPositionArray = tableContext.tableUserStatus[k]["cellPosition"];
+            cellPositionArray = tableContext.tableUserStatus[k]["userStatus"]["cellPosition"];
             x = cellPositionArray[0];
             y = cellPositionArray[1];
 
-            key = String(x) + "," + String(y);
+            key = String(x) + "_" + String(y);
             if (tableUserStatusListMapByCell[key]) {
                 tableUserStatusListMapByCell[key].push(nickname);
             } else {
@@ -185,15 +254,16 @@
             for (var j = 0; j < tableContext.table[i].length; j++) {
                 cellValueString = "<span class='cellValue'>" +tableContext.table[i][j] +"</span>";
 
-                key = String(i) + "," + String(j);
-                tipString = "";
+                key = String(i) + "_" + String(j);
+                tipString = '<span class="tipString"></span>';
                 if (tableUserStatusListMapByCell[key] && tableUserStatusListMapByCell[key].length) {
                     tipString = '<span class="tipString">' + String(tableUserStatusListMapByCell[key].length) + '</span>';
                 }
+                tdId = String(i) + "_" + String(j);
 
                 ondblclickCode = 'enterNewValue(this,' + i + ',' + j + ')';
                 onclickCode = 'enterCell(this,' + i + ',' + j + ')';
-                row.append($("<td ondblclick='" + ondblclickCode + "' onclick='"+ onclickCode +"'>" + cellValueString + tipString + "</td>"));
+                row.append($("<td id='"+ tdId +"' ondblclick='" + ondblclickCode + "' onclick='"+ onclickCode +"'>" + cellValueString + tipString + "</td>"));
             }
         }
     }
@@ -202,9 +272,7 @@
         var oldValue = $(cell).find('.cellValue').text();
         var newValue = prompt("New value", oldValue);
         if (newValue) {
-            updateCell(x, y, newValue, oldValue, function () {
-                $(cell).text(newValue);
-            });
+            updateCell(x, y, newValue, oldValue);
         }
     }
 
