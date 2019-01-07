@@ -84,8 +84,6 @@ class TableCoworkServer
                 return;
             }
 
-            var_dump($this->tablesManager->getTableIdList());
-
             $tableId = $this->arrayGet($request->get, 'tableId');
             $tableId = intval($tableId);
             if (!$tableId) {
