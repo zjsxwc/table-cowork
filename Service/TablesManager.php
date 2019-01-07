@@ -122,12 +122,16 @@ class TablesManager
 
     public function getTableIdList()
     {
+        $this->restoreTables();
+
         return array_keys($this->tables);
     }
 
 
     public function isTableExist($tableId)
     {
+        $this->restoreTables();
+
         return isset($this->tables[$tableId]);
     }
 
