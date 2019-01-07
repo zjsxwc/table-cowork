@@ -53,8 +53,6 @@ $tableUserStatus = [
 
 #### TODO
 
-优化JQuery每次点击都渲染10000个太慢了！！！！
-
 优化广播，不应该全局广播，导致客户端自己筛选tableId
 
 
