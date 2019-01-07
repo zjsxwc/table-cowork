@@ -39,10 +39,7 @@
         }
     }
 
-
-    var serverIp = '__SERVER_IP__';
-    var serverPort = '__SERVER_PORT__';
-    var ws = new WebSocket("ws://" + serverIp + ":" + serverPort);
+    var ws = new WebSocket("ws://" + window.location.host);
     ws.onopen = function () {
         console.log("opened");
         //now we can send messages to server: `ws.send("hello");`

@@ -162,8 +162,6 @@ class TableCoworkServer
 
                 //用字符串替换来传参数，😓
                 $content = str_replace("__TABLE_ID__", $tableId, $content);
-                $content = str_replace("__SERVER_IP__", $this->serverIp, $content);
-                $content = str_replace("__SERVER_PORT__", $this->serverPort, $content);
 
                 $response->end($content);
                 return;
