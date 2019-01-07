@@ -55,6 +55,7 @@ $tableUserStatus = [
 
 优化广播，不应该全局广播，导致客户端自己筛选tableId
 
+使用redis等优化存储，目前的文件存储方式代码太挫
 
 #### License
 

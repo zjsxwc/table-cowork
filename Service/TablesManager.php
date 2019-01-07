@@ -40,17 +40,30 @@ class TablesManager
     }
 
 
+    public function restoreTables()
+    {
+        $this->tables = MetaStorage::fetch("tables");
+        if (!$this->tables) {
+            $this->tables = [];
+        }
+    }
+
+
     const X_MAX = 100;
     const Y_MAX = 100;
 
     public function createTable($tableId = 0)
     {
+        $this->restoreTables();
+
         if (!$tableId) {
             $tableId = time() . rand(100000, 999999);
             $tableId = intval($tableId);
         }
 
         $this->tables[$tableId] = $this->createFixedArray(TablesManager::X_MAX, TablesManager::Y_MAX);
+
+        MetaStorage::save("tables", $this->tables);
         return $tableId;
     }
 
@@ -61,6 +74,8 @@ class TablesManager
      */
     public function updateTable($tableId, $cellPosition, $value)
     {
+        $this->restoreTables();
+
         $x = intval($cellPosition[0]);
         if ($x < 0) {
             $x = 0;
@@ -80,6 +95,8 @@ class TablesManager
             throw new \RuntimeException("cell not exist");
         }
         $this->tables[$tableId][$x][$y] = $value;
+
+        MetaStorage::save("tables", $this->tables);
     }
 
     /**
@@ -88,6 +105,8 @@ class TablesManager
      */
     public function getTable($tableId)
     {
+        $this->restoreTables();
+
         if (!isset($this->tables[$tableId])) {
             throw new \RuntimeException("table not exist");
         }
