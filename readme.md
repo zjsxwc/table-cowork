@@ -22,6 +22,7 @@
 
 #### 数据结构
 
+```php
 $tables = [
     "tableId001": [
         [cell01, cell02, ..., cell100],
@@ -38,7 +39,7 @@ $tableUserStatus = [
         ],
     ]
 ];
-
+```
 
 #### 运行
 
