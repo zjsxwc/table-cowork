@@ -41,6 +41,15 @@ class MetaStorage
         return $this->fetchInFile($metaName);
     }
 
+    public function save($metaName, $data)
+    {
+        if ($this->useRamSotrage) {
+            return $this->saveInRam($metaName, $data);
+        }
+        return $this->saveInFile($metaName, $data);
+    }
+
+
     public function fetchInRam($metaName)
     {
         $metaName = base64_encode($metaName);
@@ -54,13 +63,6 @@ class MetaStorage
         return unserialize(trim($row["data"]));
     }
 
-    public function save($metaName, $data)
-    {
-        if ($this->useRamSotrage) {
-            return $this->saveInRam($metaName, $data);
-        }
-        return $this->saveInFile($metaName, $data);
-    }
 
     public function saveInRam($metaName, $data)
     {
