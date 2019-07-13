@@ -54,12 +54,16 @@ class TableCoworkServer
     /** @var TablesManager */
     public $tablesManager;
 
+    /** @var MetaStorage */
+    public $metaStorage;
+
     public function __construct($ip = "0.0.0.0", $port = 9501)
     {
         $this->serverIp = $ip;
         $this->serverPort = $port;
 
-        $this->tablesManager = new TablesManager(new TablesUserStatusManager());
+        $this->metaStorage = new MetaStorage();
+        $this->tablesManager = new TablesManager(new TablesUserStatusManager($this->metaStorage), $this->metaStorage);
 
         $this->server = new Server($this->serverIp, $this->serverPort);
         $this->server->on('open', function (Server $server, $request) {

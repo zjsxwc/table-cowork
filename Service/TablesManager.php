@@ -12,6 +12,8 @@ class TablesManager
 
     /** @var TablesUserStatusManager */
     private $tablesUserStatusManager = null;
+    /** @var MetaStorage */
+    private $metaStorage = null;
 
     /**
      * @var [][]array
@@ -21,10 +23,12 @@ class TablesManager
     /**
      * TablesManager constructor.
      * @param TablesUserStatusManager $tablesUserStatusManager
+     * @param MetaStorage $metaStorage
      */
-    public function __construct($tablesUserStatusManager)
+    public function __construct($tablesUserStatusManager, $metaStorage)
     {
         $this->tablesUserStatusManager = $tablesUserStatusManager;
+        $this->metaStorage = $metaStorage;
     }
 
     private function createFixedArray($x, $y)
@@ -42,7 +46,7 @@ class TablesManager
 
     public function restoreTables()
     {
-        $this->tables = MetaStorage::fetch("tables");
+        $this->tables = $this->metaStorage->fetch("tables");
         if (!$this->tables) {
             $this->tables = [];
         }
@@ -63,7 +67,7 @@ class TablesManager
 
         $this->tables[$tableId] = $this->createFixedArray(TablesManager::X_MAX, TablesManager::Y_MAX);
 
-        MetaStorage::save("tables", $this->tables);
+        $this->metaStorage->save("tables", $this->tables);
         return $tableId;
     }
 
@@ -96,7 +100,7 @@ class TablesManager
         }
         $this->tables[$tableId][$x][$y] = $value;
 
-        MetaStorage::save("tables", $this->tables);
+        $this->metaStorage->save("tables", $this->tables);
     }
 
     /**

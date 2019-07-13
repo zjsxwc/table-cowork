@@ -9,10 +9,70 @@
 namespace Service;
 
 
+use Swoole\Table as SwooleTable;
+
 class MetaStorage
 {
 
-    public static function fetch($metaName)
+    /** @var SwooleTable */
+    private $ramStorage;
+    /** @var bool */
+    private $useRamSotrage;
+
+    /**
+     * MetaStorage constructor.
+     */
+    public function __construct($useRamSotrage = true)
+    {
+        $this->useRamSotrage = $useRamSotrage;
+        if ($this->useRamSotrage) {
+            $this->ramStorage = new SwooleTable(2);
+            $this->ramStorage->column('data', SwooleTable::TYPE_STRING, 1024 * 1024 * 10);
+            $this->ramStorage->create();
+        }
+
+    }
+
+    public function fetch($metaName)
+    {
+        if ($this->useRamSotrage) {
+            return $this->fetchInRam($metaName);
+        }
+        return $this->fetchInFile($metaName);
+    }
+
+    public function fetchInRam($metaName)
+    {
+        $metaName = base64_encode($metaName);
+        $metaName = str_replace(".", "", $metaName);
+        $metaName = str_replace("/", "", $metaName);
+        $metaName = str_replace("\\", "", $metaName);
+        $row = $this->ramStorage->get($metaName);
+        if (!$row) {
+            return null;
+        }
+        return unserialize(trim($row["data"]));
+    }
+
+    public function save($metaName, $data)
+    {
+        if ($this->useRamSotrage) {
+            return $this->saveInRam($metaName, $data);
+        }
+        return $this->saveInFile($metaName, $data);
+    }
+
+    public function saveInRam($metaName, $data)
+    {
+        $metaName = base64_encode($metaName);
+        $metaName = str_replace(".", "", $metaName);
+        $metaName = str_replace("/", "", $metaName);
+        $metaName = str_replace("\\", "", $metaName);
+        return $this->ramStorage->set($metaName, ["data" => serialize($data)]);
+    }
+
+
+    public function fetchInFile($metaName)
     {
         $metaName = base64_encode($metaName);
         $metaName = str_replace(".", "", $metaName);
@@ -25,7 +85,7 @@ class MetaStorage
         return unserialize($str);
     }
 
-    public static function save($metaName, $data)
+    public function saveInFile($metaName, $data)
     {
         $metaName = base64_encode($metaName);
         $metaName = str_replace(".", "", $metaName);

@@ -12,10 +12,21 @@ class TablesUserStatusManager
 {
 
     private $tablesUserStatus = [];
+    /** @var MetaStorage */
+    private $metaStorage = null;
+
+    /**
+     * TablesUserStatusManager constructor.
+     * @param MetaStorage $metaStorage
+     */
+    public function __construct(MetaStorage $metaStorage)
+    {
+        $this->metaStorage = $metaStorage;
+    }
 
     public function restoreTablesUserStatus()
     {
-        $this->tablesUserStatus = MetaStorage::fetch("tablesUserStatus");
+        $this->tablesUserStatus = $this->metaStorage->fetch("tablesUserStatus");
         if (!$this->tablesUserStatus) {
             $this->tablesUserStatus = [];
         }
@@ -42,7 +53,7 @@ class TablesUserStatusManager
 
         $this->tablesUserStatus[$tableId][$nickname]["cellPosition"] = $cellPosition;
 
-        MetaStorage::save("tablesUserStatus", $this->tablesUserStatus);
+        $this->metaStorage->save("tablesUserStatus", $this->tablesUserStatus);
     }
 
     /**
@@ -65,7 +76,7 @@ class TablesUserStatusManager
             ];
         }
 
-        MetaStorage::save("tablesUserStatus", $this->tablesUserStatus);
+        $this->metaStorage->save("tablesUserStatus", $this->tablesUserStatus);
 
         return $tablesUserStatus;
     }
